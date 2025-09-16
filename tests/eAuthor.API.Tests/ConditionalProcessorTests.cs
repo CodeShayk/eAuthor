@@ -1,18 +1,20 @@
 using NUnit.Framework;
 using System.Text.Json;
-using WordTemplating.Core.Services.Expressions;
-using WordTemplating.Core.Services;
+using eAuthor.Services;
+using eAuthor.Services.Expressions;
 
-namespace WordTemplating.Tests;
+namespace eAuthor.API.Tests;
 
-public class ConditionalProcessorTests {
+public class ConditionalProcessorTests
+{
     private ConditionalBlockProcessor _proc = null!;
     private ExpressionParser _parser = null!;
     private ExpressionEvaluator _eval = null!;
     private JsonElement _data;
 
     [SetUp]
-    public void Setup() {
+    public void Setup()
+    {
         _parser = new ExpressionParser();
         _eval = new ExpressionEvaluator();
         _proc = new ConditionalBlockProcessor(_parser, _eval);
@@ -26,35 +28,40 @@ public class ConditionalProcessorTests {
     }
 
     [Test]
-    public void RendersIfTrue() {
+    public void RendersIfTrue()
+    {
         var input = "Hello {{ if /Customer/IsPremium }}VIP{{ end }}!";
         var outp = _proc.ProcessConditionals(input, _data);
         Assert.That(outp, Is.EqualTo("Hello VIP!"));
     }
 
     [Test]
-    public void SkipsIfFalse() {
+    public void SkipsIfFalse()
+    {
         var input = "Hello {{ if /Customer/NotExists }}VIP{{ end }}!";
         var outp = _proc.ProcessConditionals(input, _data);
         Assert.That(outp, Is.EqualTo("Hello !"));
     }
 
     [Test]
-    public void HandlesElse() {
+    public void HandlesElse()
+    {
         var input = "{{ if /Customer/IsPremium }}A{{ else }}B{{ end }}";
         var outp = _proc.ProcessConditionals(input, _data);
         Assert.That(outp, Is.EqualTo("A"));
     }
 
     [Test]
-    public void HandlesElseFalseBranch() {
+    public void HandlesElseFalseBranch()
+    {
         var input = "{{ if /Customer/Unknown }}A{{ else }}B{{ end }}";
         var outp = _proc.ProcessConditionals(input, _data);
         Assert.That(outp, Is.EqualTo("B"));
     }
 
     [Test]
-    public void NestedBlocks() {
+    public void NestedBlocks()
+    {
         var input = "{{ if /Customer/IsPremium }}X {{ if /Customer/Name }}Y{{ end }} Z{{ end }}";
         var outp = _proc.ProcessConditionals(input, _data);
         Assert.That(outp.Replace(" ", ""), Is.EqualTo("XYZ"));

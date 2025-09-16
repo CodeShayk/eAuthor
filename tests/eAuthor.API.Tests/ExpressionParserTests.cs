@@ -1,25 +1,29 @@
+using eAuthor.Services.Expressions;
 using NUnit.Framework;
-using WordTemplating.Core.Services.Expressions;
 
-namespace WordTemplating.Tests;
+namespace eAuthor.API.Tests;
 
-public class ExpressionParserTests {
+public class ExpressionParserTests
+{
     private IExpressionParser _parser = null!;
 
     [SetUp]
-    public void Setup() {
+    public void Setup()
+    {
         _parser = new ExpressionParser();
     }
 
     [Test]
-    public void ParsesPathOnly() {
+    public void ParsesPathOnly()
+    {
         var p = _parser.Parse("/Customer/Name");
         Assert.That(p.DataPath, Is.EqualTo("/Customer/Name"));
         Assert.That(p.Filters, Is.Empty);
     }
 
     [Test]
-    public void ParsesFilters() {
+    public void ParsesFilters()
+    {
         var p = _parser.Parse("/Order/Date | date:yyyy-MM-dd | upper");
         Assert.That(p.DataPath, Is.EqualTo("/Order/Date"));
         Assert.That(p.Filters.Count, Is.EqualTo(2));

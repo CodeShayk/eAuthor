@@ -1,11 +1,12 @@
 using NUnit.Framework;
 using System.Text.Json;
-using WordTemplating.Core.Services.Expressions;
-using WordTemplating.Core.Services;
+using eAuthor.Services;
+using eAuthor.Services.Expressions;
 
-namespace WordTemplating.Tests;
+namespace eAuthor.API.Tests;
 
-public class RepeaterMetadataTests {
+public class RepeaterMetadataTests
+{
     private RepeaterBlockProcessor _rep = null!;
     private ExpressionParser _parser = null!;
     private ExpressionEvaluator _eval = null!;
@@ -13,7 +14,8 @@ public class RepeaterMetadataTests {
     private JsonElement _data;
 
     [SetUp]
-    public void Setup() {
+    public void Setup()
+    {
         _parser = new ExpressionParser();
         _eval = new ExpressionEvaluator();
         _cond = new ConditionalBlockProcessor(_parser, _eval);
@@ -33,7 +35,8 @@ public class RepeaterMetadataTests {
     }
 
     [Test]
-    public void InsertsIndexAndFlags() {
+    public void InsertsIndexAndFlags()
+    {
         var input = "{{ repeat /Items/Item }}({{ index }}:{{ first }}:{{ last }}:{{ odd }}) {{ Name }} {{ endrepeat }}";
         var output = _rep.ProcessRepeaters(input, _data).Trim();
         // (1:true:false:false) Alpha (2:false:false:true) Beta (3:false:true:false) Gamma

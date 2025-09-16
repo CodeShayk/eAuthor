@@ -6,7 +6,7 @@ using System.Text.Json;
 using eAuthor.Services.Expressions;
 using eAuthor.Models;
 
-namespace eAuthor.Services.Expressions;
+namespace eAuthor.Services;
 
 public class DocumentGenerationService
 {

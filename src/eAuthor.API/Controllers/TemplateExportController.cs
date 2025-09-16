@@ -7,19 +7,23 @@ namespace eAuthor.Controllers;
 [ApiController]
 [Route("api/templates")]
 [Authorize]
-public class TemplateExportController : ControllerBase {
+public class TemplateExportController : ControllerBase
+{
     private readonly TemplateService _templateService;
     private readonly DynamicDocxBuilderService _builder;
 
-    public TemplateExportController(TemplateService templateService, DynamicDocxBuilderService builder) {
+    public TemplateExportController(TemplateService templateService, DynamicDocxBuilderService builder)
+    {
         _templateService = templateService;
         _builder = builder;
     }
 
     [HttpGet("{id:guid}/export-dynamic-docx")]
-    public async Task<IActionResult> ExportDynamic(Guid id) {
+    public async Task<IActionResult> ExportDynamic(Guid id)
+    {
         var template = await _templateService.GetAsync(id);
-        if (template == null) return NotFound();
+        if (template == null)
+            return NotFound();
         var bytes = _builder.Build(template);
         return File(bytes,
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

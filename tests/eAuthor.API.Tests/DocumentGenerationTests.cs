@@ -1,22 +1,27 @@
+using eAuthor.Models;
+using eAuthor.Services;
+using eAuthor.Services.Expressions;
 using NUnit.Framework;
+using System;
 using System.Text.Json;
-using WordTemplating.Core.Models;
-using WordTemplating.Core.Services;
-using WordTemplating.Core.Services.Expressions;
 
-namespace WordTemplating.Tests;
+namespace eAuthor.API.Tests;
 
-public class DocumentGenerationTests {
+public class DocumentGenerationTests
+{
     private DocumentGenerationService _service = null!;
 
     [SetUp]
-    public void Setup() {
+    public void Setup()
+    {
         _service = new DocumentGenerationService(new ExpressionParser(), new ExpressionEvaluator());
     }
 
     [Test]
-    public void ReplacesTokensInHtml() {
-        var template = new Template {
+    public void ReplacesTokensInHtml()
+    {
+        var template = new Template
+        {
             Id = Guid.NewGuid(),
             Name = "Test",
             HtmlBody = "<h1>{{ /Customer/Name | upper }}</h1>"
