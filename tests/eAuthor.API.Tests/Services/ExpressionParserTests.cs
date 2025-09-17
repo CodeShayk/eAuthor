@@ -1,7 +1,7 @@
 using eAuthor.Services.Expressions;
 using NUnit.Framework;
 
-namespace eAuthor.API.Tests;
+namespace eAuthor.API.Tests.Services;
 
 public class ExpressionParserTests
 {

@@ -113,9 +113,9 @@ builder.Services.AddSwaggerGen(cfg =>
 {
     cfg.SwaggerDoc("v1", new()
     {
-        Title = "Word Templating API",
+        Title = "eAuthor API",
         Version = "v1",
-        Description = "Dynamic DOCX generation & templating platform"
+        Description = "Dynamic document generation & templating platform"
     });
 
     // JWT header

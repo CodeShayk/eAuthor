@@ -11,7 +11,7 @@ using eAuthor.Services.Expressions;
 using eAuthor.Services.Impl;
 using NUnit.Framework;
 
-namespace eAuthor.API.Tests
+namespace eAuthor.API.Tests.Services
 {
     [TestFixture]
     public class DocumentGenerationTests
@@ -238,13 +238,9 @@ End";
                 var exprIndex = _parser.Parse("/Data/Items[1]/Value");
                 var el = _evaluator.ResolvePath(json, exprIndex.DataPath);
                 if (el?.ValueKind == JsonValueKind.String)
-                {
                     Assert.That(el?.GetString(), Is.EqualTo("B"));
-                }
                 else
-                {
                     Assert.Inconclusive("Array index parse returned non-string element; parser may not support indexing.");
-                }
             }
             catch (Exception ex)
             {

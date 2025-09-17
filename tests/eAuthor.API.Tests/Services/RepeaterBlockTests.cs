@@ -3,7 +3,7 @@ using System.Text.Json;
 using eAuthor.Services.Expressions;
 using eAuthor.Services.Impl;
 
-namespace eAuthor.API.Tests;
+namespace eAuthor.API.Tests.Services;
 
 public class RepeaterBlockTests
 {

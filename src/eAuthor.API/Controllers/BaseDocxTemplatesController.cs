@@ -19,7 +19,7 @@ public class BaseDocxTemplatesController : ControllerBase
 
     [HttpPost("upload")]
     [RequestSizeLimit(20_000_000)] // 20MB
-    public async Task<IActionResult> Upload([FromForm] IFormFile file)
+    public async Task<IActionResult> Upload([FromBody] FormFile file)
     {
         if (file == null || file.Length == 0)
             return BadRequest("File required");

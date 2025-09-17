@@ -1,5 +1,6 @@
 using Dapper;
 using eAuthor.Models;
+using System.Data;
 
 namespace eAuthor.Repositories.Impl;
 
@@ -8,7 +9,9 @@ public class DocumentGenerationJobRepository : IDocumentGenerationJobRepository
     private readonly IDapperContext _ctx;
 
     public DocumentGenerationJobRepository(IDapperContext ctx)
-    { _ctx = ctx; }
+    {
+        _ctx = ctx;
+    }
 
     public async Task<IEnumerable<DocumentGenerationJob>> GetByCorrelationAsync(Guid correlationId)
     {
@@ -28,50 +31,89 @@ public class DocumentGenerationJobRepository : IDocumentGenerationJobRepository
     public async Task InsertBatchAsync(IEnumerable<DocumentGenerationJob> jobs)
     {
         using var conn = _ctx.CreateConnection();
+        if (conn.State != ConnectionState.Open)
+            conn.Open();
+
         using var tx = conn.BeginTransaction();
-        foreach (var j in jobs)
-            await conn.ExecuteAsync(@"
-                INSERT INTO DocumentGenerationJobs
-                (Id, TemplateId, Status, InputData, CreatedUtc, CorrelationId, BatchGroup)
-                VALUES (@Id,@TemplateId,@Status,@InputData,@CreatedUtc,@CorrelationId,@BatchGroup);", j, tx);
-        tx.Commit();
+        try
+        {
+            foreach (var j in jobs)
+            {
+                await conn.ExecuteAsync(@"
+                    INSERT INTO DocumentGenerationJobs
+                    (Id, TemplateId, Status, InputData, CreatedUtc, CorrelationId, BatchGroup)
+                    VALUES (@Id,@TemplateId,@Status,@InputData,@CreatedUtc,@CorrelationId,@BatchGroup);",
+                    j, tx);
+            }
+            tx.Commit();
+        }
+        catch
+        {
+            try
+            { tx.Rollback(); }
+            catch { /* ignore rollback errors */ }
+            throw;
+        }
     }
-
-    public bool LockingSupported => true;
-
-    public bool UseAppLock => false;
 
     public async Task<(bool, DocumentGenerationJob?)> TryStartNextPendingAsync()
     {
         using var conn = _ctx.CreateConnection();
-        using var tx = conn.BeginTransaction(System.Data.IsolationLevel.ReadCommitted);
-        // pick one pending
-        var candidate = await conn.QueryFirstOrDefaultAsync<DocumentGenerationJob>(
-            "SELECT TOP 1 * FROM DocumentGenerationJobs WITH (UPDLOCK, READPAST, ROWLOCK) WHERE Status='Pending' ORDER BY CreatedUtc");
-        if (candidate == null)
+        if (conn.State != ConnectionState.Open)
+            conn.Open();
+
+        using var tx = conn.BeginTransaction(IsolationLevel.ReadCommitted);
+        try
         {
+            var candidate = await conn.QueryFirstOrDefaultAsync<DocumentGenerationJob>(
+                "SELECT TOP 1 * FROM DocumentGenerationJobs WITH (UPDLOCK, READPAST, ROWLOCK) WHERE Status='Pending' ORDER BY CreatedUtc",
+                transaction: tx);
+
+            if (candidate == null)
+            {
+                tx.Commit();
+                return (false, candidate);
+            }
+
+            await conn.ExecuteAsync(
+                "UPDATE DocumentGenerationJobs SET Status='Processing', StartedUtc=SYSUTCDATETIME() WHERE Id=@Id",
+                new { candidate.Id }, tx);
+
             tx.Commit();
-            return (false, candidate);
+
+            candidate.Status = "Processing";
+            candidate.StartedUtc = DateTime.UtcNow;
+            return (true, candidate);
         }
-        await conn.ExecuteAsync("UPDATE DocumentGenerationJobs SET Status='Processing', StartedUtc=SYSUTCDATETIME() WHERE Id=@Id",
-            new { candidate.Id }, tx);
-        tx.Commit();
-        candidate.Status = "Processing";
-        candidate.StartedUtc = DateTime.UtcNow;
-        return (true, candidate);
+        catch
+        {
+            try
+            { tx.Rollback(); }
+            catch { /* ignore rollback errors */ }
+            throw;
+        }
     }
 
     public async Task CompleteSuccessAsync(Guid id, byte[] file)
     {
         using var conn = _ctx.CreateConnection();
-        await conn.ExecuteAsync(@"UPDATE DocumentGenerationJobs SET Status='Completed', ResultFile=@ResultFile, CompletedUtc=SYSUTCDATETIME()
-            WHERE Id=@Id", new { Id = id, ResultFile = file });
+        await conn.ExecuteAsync(@"
+            UPDATE DocumentGenerationJobs
+            SET Status='Completed', ResultFile=@ResultFile, CompletedUtc=SYSUTCDATETIME()
+            WHERE Id=@Id",
+            new { Id = id, ResultFile = file });
     }
 
     public async Task CompleteFailureAsync(Guid id, string error)
     {
         using var conn = _ctx.CreateConnection();
-        await conn.ExecuteAsync(@"UPDATE DocumentGenerationJobs SET Status='Failed', ErrorMessage=@Error, CompletedUtc=SYSUTCDATETIME()
-            WHERE Id=@Id", new { Id = id, Error = error });
+        await conn.ExecuteAsync(@"
+            UPDATE DocumentGenerationJobs
+            SET Status='Failed', ErrorMessage=@Error, CompletedUtc=SYSUTCDATETIME()
+            WHERE Id=@Id",
+            new { Id = id, Error = error });
     }
+
+    public bool LockingSupported => true;
+    public bool UseAppLock => false;
 }

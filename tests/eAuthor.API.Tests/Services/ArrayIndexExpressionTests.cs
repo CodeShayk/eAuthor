@@ -2,7 +2,7 @@ using eAuthor.Services.Expressions;
 using NUnit.Framework;
 using System.Text.Json;
 
-namespace eAuthor.API.Tests;
+namespace eAuthor.API.Tests.Services;
 
 public class ArrayIndexExpressionTests
 {
