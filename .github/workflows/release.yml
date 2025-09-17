@@ -64,7 +64,7 @@ jobs:
 
       - name: Pack Stable
         run: |
-          dotnet pack src/eAuthor/eAuthor.csproj \
+          dotnet pack src/eAuthor.API/eAuthor.API.csproj \
             -c Release -o artifacts \
             /p:PackageVersion=${{ steps.gitversion.outputs.NuGetVersionV2 }}
 
