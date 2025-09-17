@@ -8,7 +8,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: ${{ toLower(github.repository) }}
+  IMAGE_NAME: codeshayk/eauthor
 
 jobs:
   build-and-deploy:
