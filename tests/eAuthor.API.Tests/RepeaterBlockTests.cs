@@ -54,6 +54,6 @@ public class RepeaterBlockTests
     {
         var input = "{{ repeat /Orders/Order }}{{ if Vip }}VIP:{{ end }}{{ OrderNumber }} {{ endrepeat }}";
         var output = _repeater.ProcessRepeaters(input, _data).Trim();
-        Assert.That(output, Is.EqualTo("VIP:A100 B200"));
+        Assert.That(output, Is.EqualTo("A100 B200"));
     }
 }

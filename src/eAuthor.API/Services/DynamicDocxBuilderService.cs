@@ -208,8 +208,8 @@ namespace eAuthor.Services
 
             // IMPORTANT: Do NOT redeclare xmlns on these unknown elements. Just use prefix; root doc has w15 declared.
             // Using a minimal self-closing tag. Including the namespace again inside here can cause 'duplicate prefix' issues.
-            var repeatingSectionUnknown = new OpenXmlUnknownElement("<w15:repeatingSection/>");
-            var repeatingSectionItemUnknown = new OpenXmlUnknownElement("<w15:repeatingSectionItem/>");
+            var repeatingSectionUnknown = new OpenXmlUnknownElement("repeatingSection");
+            var repeatingSectionItemUnknown = new OpenXmlUnknownElement("repeatingSectionItem");
 
             // Inner item SDT
             var itemSdt = new SdtBlock(

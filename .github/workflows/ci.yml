@@ -58,7 +58,7 @@ jobs:
       - name: Pack (Pre-release or Alpha)
         if: ${{ steps.gitversion.outputs.PreReleaseTag != '' && github.ref_type == 'branch' && github.ref != 'refs/heads/main' }}
         run: |
-          dotnet pack src/MyLibrary/MyLibrary.csproj \
+          dotnet pack src/eAuthor/eAuthor.csproj \
             -c Release -o artifacts \
             /p:PackageVersion=${{ steps.gitversion.outputs.NuGetVersionV2 }}
 
