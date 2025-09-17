@@ -8,7 +8,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: codeshayk/eauthor
+  IMAGE_NAME: codeshayk/eauthor.api
 
 jobs:
   build-and-deploy:

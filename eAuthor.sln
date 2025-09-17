@@ -11,6 +11,18 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "eAuthor.API", "src\eAuthor.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "eAuthor.API.Tests", "tests\eAuthor.API.Tests\eAuthor.API.Tests.csproj", "{1D6A62AF-3292-EC75-EE61-15F38017F890}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Misc", "Misc", "{A19DA043-80BE-41C9-8C10-BE888868CA6E}"
+	ProjectSection(SolutionItems) = preProject
+		.dockerignore = .dockerignore
+		.gitignore = .gitignore
+		Directory.Build.props = Directory.Build.props
+		Dockerfile = Dockerfile
+		GitVersion.yml = GitVersion.yml
+		LICENSE = LICENSE
+		nuget.config = nuget.config
+		README.md = README.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
