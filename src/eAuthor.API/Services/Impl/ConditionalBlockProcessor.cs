@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using eAuthor.Services.Expressions;
@@ -6,19 +10,8 @@ namespace eAuthor.Services.Impl
 {
     public class ConditionalBlockProcessor : IConditionalBlockProcessor
     {
-        // Matches: {{ if <cond> }} (body including ALL inner text) {{ end }}
-        private static readonly Regex IfBlockRx = new(
-            @"\{\{\s*if\s+(?<cond>[^}]+?)\s*\}\}(?<body>.*?)\{\{\s*end\s*\}\}",
-            RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
-        // Matches: {{ elseif <cond> }}  (no body captured here; body is determined by slicing)
-        private static readonly Regex ElseIfRx = new(
-            @"\{\{\s*elseif\s+(?<cond>[^}]+?)\s*\}\}",
-            RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
-        // Matches: {{ else }}
-        private static readonly Regex ElseRx = new(
-            @"\{\{\s*else\s*\}\}",
+        private static readonly Regex ControlTokenRx = new(
+            @"\{\{\s*(?<type>if|elseif|else|end)(?:\s+(?<cond>[^}]+?))?\s*\}\}",
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         private readonly IExpressionParser _parser;
@@ -36,88 +29,196 @@ namespace eAuthor.Services.Impl
                 return content;
 
             var guard = 0;
+            var sb = new StringBuilder(content);
+
             while (true)
             {
-                var match = IfBlockRx.Match(content);
-                if (!match.Success)
+                guard++;
+                if (guard > 5000)
+                    throw new InvalidOperationException("Too many conditional processing iterations (possible malformed or cyclic template).");
+
+                var nextIfIndex = IndexOfIfToken(sb, 0);
+                if (nextIfIndex < 0)
                     break;
 
-                guard++;
-                if (guard > 3000)
-                    throw new InvalidOperationException("Too many nested conditional resolutions (possible infinite loop).");
+                if (!TryExtractFullIfBlock(sb.ToString(), nextIfIndex, out var block))
+                    break;
 
-                var fullMatchStart = match.Index;
-                var fullMatchLength = match.Length;
-                var condition = match.Groups["cond"].Value.Trim();
-                var innerBody = match.Groups["body"].Value;
-
-                // Identify elseif & else markers inside the body (first level only).
-                var elseifMatches = ElseIfRx.Matches(innerBody).Cast<Match>().OrderBy(m => m.Index).ToList();
-                var elseMatch = ElseRx.Match(innerBody);
-
-                // Segment extraction
-                var segments = new List<(string kind, string? expr, string body)>();
-
-                var firstSegmentEnd = innerBody.Length;
-                if (elseifMatches.Any())
-                    firstSegmentEnd = Math.Min(firstSegmentEnd, elseifMatches.First().Index);
-                if (elseMatch.Success)
-                    firstSegmentEnd = Math.Min(firstSegmentEnd, elseMatch.Index);
-
-                // IF segment
-                segments.Add(("if", condition, innerBody.Substring(0, firstSegmentEnd)));
-
-                // ELSEIF segments
-                for (var i = 0; i < elseifMatches.Count; i++)
-                {
-                    var current = elseifMatches[i];
-                    var start = current.Index + current.Length;
-                    var end = i + 1 < elseifMatches.Count
-                        ? elseifMatches[i + 1].Index
-                        : elseMatch.Success ? elseMatch.Index : innerBody.Length;
-                    var expr = current.Groups["cond"].Value.Trim();
-                    segments.Add(("elseif", expr, innerBody.Substring(start, end - start)));
-                }
-
-                // ELSE segment
-                if (elseMatch.Success)
-                {
-                    var start = elseMatch.Index + elseMatch.Length;
-                    if (start <= innerBody.Length)
-                        segments.Add(("else", null, innerBody.Substring(start)));
-                }
-
-                // Decide which segment to keep
-                var replacement = string.Empty;
-                foreach (var seg in segments)
-                    if (seg.kind == "if" || seg.kind == "elseif")
-                        if (EvaluateConditionSafe(seg.expr!, root))
-                        {
-                            replacement = seg.body;
-                            break;
-                        }
-                        else if (seg.kind == "else")
-                        {
-                            replacement = seg.body;
-                            break;
-                        }
-
-                // Replace the entire matched conditional block with the decided segment
-                content = content.Substring(0, fullMatchStart)
-                          + replacement
-                          + content.Substring(fullMatchStart + fullMatchLength);
+                var replacement = EvaluateBlock(block!, root);
+                sb.Remove(block!.FullStart, block.FullLength);
+                sb.Insert(block.FullStart, replacement);
             }
 
-            return content;
+            return sb.ToString();
         }
 
-        private bool EvaluateConditionSafe(string rawExpr, JsonElement root)
+        private int IndexOfIfToken(StringBuilder sb, int start)
+        {
+            var text = sb.ToString();
+            var match = ControlTokenRx.Match(text, start);
+            while (match.Success)
+            {
+                if (string.Equals(match.Groups["type"].Value, "if", StringComparison.OrdinalIgnoreCase))
+                    return match.Index;
+                match = match.NextMatch();
+            }
+            return -1;
+        }
+
+        private bool TryExtractFullIfBlock(string text, int ifStart, out IfBlock? block)
+        {
+            block = null;
+
+            var firstMatch = ControlTokenRx.Match(text, ifStart);
+            if (!firstMatch.Success || !IsType(firstMatch, "if"))
+                return false;
+
+            var stack = new Stack<Match>();
+            stack.Push(firstMatch);
+
+            var cursor = firstMatch.Index + firstMatch.Length;
+            Match? closingEnd = null;
+
+            while (true)
+            {
+                var m = ControlTokenRx.Match(text, cursor);
+                if (!m.Success)
+                    break;
+
+                var type = m.Groups["type"].Value.ToLowerInvariant();
+
+                if (type == "if")
+                {
+                    stack.Push(m);
+                }
+                else if (type == "end")
+                {
+                    if (stack.Count == 1)
+                    {
+                        closingEnd = m;
+                        break;
+                    }
+                    stack.Pop();
+                }
+
+                cursor = m.Index + m.Length;
+            }
+
+            if (closingEnd == null)
+                return false;
+
+            var fullStart = firstMatch.Index;
+            var fullLen = closingEnd.Index + closingEnd.Length - fullStart;
+
+            var innerBodyStart = firstMatch.Index + firstMatch.Length;
+            var innerBodyLen = closingEnd.Index - innerBodyStart;
+            var inner = innerBodyLen > 0 ? text.Substring(innerBodyStart, innerBodyLen) : string.Empty;
+
+            var branchTokens = new List<MatchInfo>();
+            var depth = 0;
+
+            var scanMatch = ControlTokenRx.Match(text, innerBodyStart);
+            while (scanMatch.Success && scanMatch.Index < closingEnd.Index)
+            {
+                var t = scanMatch.Groups["type"].Value.ToLowerInvariant();
+
+                if (t == "if")
+                    depth++;
+                else if (t == "end")
+                    depth = Math.Max(0, depth - 1);
+                else if ((t == "elseif" || t == "else") && depth == 0)
+                {
+                    branchTokens.Add(new MatchInfo
+                    {
+                        Match = scanMatch,
+                        Type = t,
+                        Condition = scanMatch.Groups["cond"]?.Value?.Trim()
+                    });
+                }
+
+                scanMatch = scanMatch.NextMatch();
+            }
+
+            var segments = new List<Segment>();
+
+            var firstBranchPos = branchTokens.Any()
+                ? branchTokens.Min(b => b.Match.Index)
+                : closingEnd.Index;
+
+            var ifBody = text.Substring(innerBodyStart, firstBranchPos - innerBodyStart);
+
+            segments.Add(new Segment
+            {
+                Kind = "if",
+                Condition = firstMatch.Groups["cond"]?.Value?.Trim(),
+                Body = ifBody
+            });
+
+            for (var i = 0; i < branchTokens.Count; i++)
+            {
+                var bt = branchTokens[i];
+                if (bt.Type == "elseif")
+                {
+                    var segStart = bt.Match.Index + bt.Match.Length;
+                    var segEndExclusive = (i + 1 < branchTokens.Count)
+                        ? branchTokens[i + 1].Match.Index
+                        : closingEnd.Index;
+                    var body = text.Substring(segStart, segEndExclusive - segStart);
+                    segments.Add(new Segment
+                    {
+                        Kind = "elseif",
+                        Condition = bt.Condition,
+                        Body = body
+                    });
+                }
+            }
+
+            var elseToken = branchTokens.LastOrDefault(b => b.Type == "else");
+            if (elseToken != null)
+            {
+                var segStart = elseToken.Match.Index + elseToken.Match.Length;
+                var segEndExclusive = closingEnd.Index;
+                var body = text.Substring(segStart, segEndExclusive - segStart);
+                segments.Add(new Segment
+                {
+                    Kind = "else",
+                    Condition = null,
+                    Body = body
+                });
+            }
+
+            block = new IfBlock
+            {
+                FullStart = fullStart,
+                FullLength = fullLen,
+                Segments = segments
+            };
+            return true;
+        }
+
+        private string EvaluateBlock(IfBlock block, JsonElement root)
+        {
+            foreach (var seg in block.Segments)
+            {
+                if (seg.Kind == "if" || seg.Kind == "elseif")
+                {
+                    if (EvaluateConditionSafe(seg.Condition!, root))
+                        return seg.Body;
+                }
+                else if (seg.Kind == "else")
+                {
+                    return seg.Body;
+                }
+            }
+            return string.Empty;
+        }
+
+        private bool EvaluateConditionSafe(string expr, JsonElement root)
         {
             try
             {
-                var parsed = _parser.Parse(rawExpr);
-                var valueEl = _evaluator.ResolvePath(root, parsed.DataPath);
-                return IsTruthy(valueEl);
+                var parsed = _parser.Parse(expr);
+                return _evaluator.EvaluateBoolean(root, parsed);
             }
             catch
             {
@@ -125,41 +226,28 @@ namespace eAuthor.Services.Impl
             }
         }
 
-        private bool IsTruthy(JsonElement? element)
+        private static bool IsType(Match m, string type) =>
+            string.Equals(m.Groups["type"].Value, type, StringComparison.OrdinalIgnoreCase);
+
+        private sealed class MatchInfo
         {
-            if (element == null)
-                return false;
-            var v = element.Value;
+            public Match Match { get; set; } = default!;
+            public string Type { get; set; } = "";
+            public string? Condition { get; set; }
+        }
 
-            switch (v.ValueKind)
-            {
-                case JsonValueKind.Undefined:
-                case JsonValueKind.Null:
-                case JsonValueKind.False:
-                    return false;
+        private sealed class Segment
+        {
+            public string Kind { get; set; } = "";
+            public string? Condition { get; set; }
+            public string Body { get; set; } = "";
+        }
 
-                case JsonValueKind.True:
-                    return true;
-
-                case JsonValueKind.String:
-                    return !string.IsNullOrWhiteSpace(v.GetString());
-
-                case JsonValueKind.Number:
-                    if (v.TryGetInt64(out var l))
-                        return l != 0;
-                    if (v.TryGetDouble(out var d))
-                        return Math.Abs(d) > double.Epsilon;
-                    return true;
-
-                case JsonValueKind.Array:
-                    return v.GetArrayLength() > 0;
-
-                case JsonValueKind.Object:
-                    return v.EnumerateObject().Any();
-
-                default:
-                    return false;
-            }
+        private sealed class IfBlock
+        {
+            public int FullStart { get; set; }
+            public int FullLength { get; set; }
+            public List<Segment> Segments { get; set; } = new();
         }
     }
 }
