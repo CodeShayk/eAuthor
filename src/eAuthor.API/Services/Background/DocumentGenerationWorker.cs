@@ -1,6 +1,7 @@
 using System.Text.Json;
 using eAuthor.Models;
 using eAuthor.Repositories;
+using eAuthor.Services.Impl;
 
 namespace eAuthor.Services.Background;
 
@@ -8,16 +9,16 @@ public class DocumentGenerationWorker : BackgroundService
 {
     private readonly ILogger<DocumentGenerationWorker> _logger;
     private readonly IDocumentGenerationJobRepository _jobRepo;
-    private readonly TemplateService _templateService;
-    private readonly DocumentGenerationService _docService;
+    private readonly ITemplateService _templateService;
+    private readonly IDocumentGenerationService _docService;
     private readonly IBaseDocxTemplateRepository _baseRepo;
     private readonly IDocumentJobQueue _queue;
 
     public DocumentGenerationWorker(
         ILogger<DocumentGenerationWorker> logger,
         IDocumentGenerationJobRepository jobRepo,
-        TemplateService templateService,
-        DocumentGenerationService docService,
+        ITemplateService templateService,
+        IDocumentGenerationService docService,
         IBaseDocxTemplateRepository baseRepo,
         IDocumentJobQueue queue)
     {

@@ -1,3 +1,5 @@
+using eAuthor.Services.Impl;
+
 namespace eAuthor.Services;
 
 public static class ServiceRegistrationExtensions {

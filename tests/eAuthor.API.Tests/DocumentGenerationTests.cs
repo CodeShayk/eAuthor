@@ -8,6 +8,7 @@ using DocumentFormat.OpenXml.Wordprocessing;
 using eAuthor.Models;
 using eAuthor.Services;
 using eAuthor.Services.Expressions;
+using eAuthor.Services.Impl;
 using NUnit.Framework;
 
 namespace eAuthor.API.Tests

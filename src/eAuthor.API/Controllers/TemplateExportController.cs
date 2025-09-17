@@ -9,10 +9,10 @@ namespace eAuthor.Controllers;
 [Authorize]
 public class TemplateExportController : ControllerBase
 {
-    private readonly TemplateService _templateService;
-    private readonly DynamicDocxBuilderService _builder;
+    private readonly ITemplateService _templateService;
+    private readonly IDynamicDocxBuilderService _builder;
 
-    public TemplateExportController(TemplateService templateService, DynamicDocxBuilderService builder)
+    public TemplateExportController(ITemplateService templateService, IDynamicDocxBuilderService builder)
     {
         _templateService = templateService;
         _builder = builder;

@@ -1,6 +1,31 @@
-// inside toolbar area:
-<button onClick={async ()=>{
-  // save first if needed
-  // assume last saved id accessible or returned
-  alert('After saving, call GET /api/templates/{id}/export-dynamic-docx in your browser or add code to fetch & download.');
-}}>Export Dynamic DOCX</button>
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Login from '././components/Login';
+import AuthCallback from '././components/AuthCallback';
+import Dashboard from '././components/Dashboard';
+import PrivateRoute from '././components/PrivateRoute';
+import './index.css';
+
+function App() {
+  return (
+    <Router>
+      <div className="App">
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </div>
+    </Router>
+  );
+}
+
+export default App;

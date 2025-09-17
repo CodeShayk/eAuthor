@@ -12,11 +12,11 @@ namespace eAuthor.Controllers;
 [Authorize]
 public class GenerateController : ControllerBase
 {
-    private readonly TemplateService _templateService;
-    private readonly DocumentGenerationService _docService;
+    private readonly ITemplateService _templateService;
+    private readonly IDocumentGenerationService _docService;
     private readonly IBaseDocxTemplateRepository _baseRepo;
 
-    public GenerateController(TemplateService t, DocumentGenerationService d, IBaseDocxTemplateRepository baseRepo)
+    public GenerateController(ITemplateService t, IDocumentGenerationService d, IBaseDocxTemplateRepository baseRepo)
     {
         _templateService = t;
         _docService = d;

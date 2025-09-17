@@ -11,16 +11,16 @@ namespace eAuthor.Controllers;
 [Authorize]
 public class TemplateConversionController : ControllerBase
 {
-    private readonly TemplateService _templateService;
-    private readonly HtmlToDynamicConverter _converter;
-    private readonly DynamicDocxBuilderService _builder;
+    private readonly ITemplateService _templateService;
+    private readonly IHtmlToDynamicConverter _converter;
+    private readonly IDynamicDocxBuilderService _builder;
     private readonly IBaseDocxTemplateRepository _baseRepo;
     private readonly ITemplateRepository _templateRepo;
 
     public TemplateConversionController(
-        TemplateService templateService,
-        HtmlToDynamicConverter converter,
-        DynamicDocxBuilderService builder,
+        ITemplateService templateService,
+        IHtmlToDynamicConverter converter,
+        IDynamicDocxBuilderService builder,
         IBaseDocxTemplateRepository baseRepo,
         ITemplateRepository templateRepo)
     {

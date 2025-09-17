@@ -1,11 +1,18 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using eAuthor;
+using eAuthor.Repositories;
+using eAuthor.Repositories.Impl;
 using eAuthor.Services;
+using eAuthor.Services.Background;
 using eAuthor.Services.Expressions;
+using eAuthor.Services.Impl;
+using Ganss.Xss;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -131,6 +138,12 @@ builder.Services.AddSwaggerGen(cfg =>
 // ------------------------------------------------------------
 // Core / Domain Services Registration
 // ------------------------------------------------------------
+builder.Services.AddSingleton<IDocumentGenerationService, DocumentGenerationService>();
+builder.Services.AddSingleton<ITemplateService, TemplateService>();
+builder.Services.AddSingleton<IHtmlToDynamicConverter, HtmlToDynamicConverter>();
+builder.Services.AddSingleton<IHtmlSanitizer, HtmlSanitizer>();
+builder.Services.AddSingleton<IXsdService, XsdService>();
+builder.Services.AddSingleton<IMemoryCache, MemoryCache>();
 
 // Expression + Conditional system
 builder.Services.AddSingleton<IExpressionParser, ExpressionParser>();
@@ -138,21 +151,22 @@ builder.Services.AddSingleton<IExpressionEvaluator, ExpressionEvaluator>();
 builder.Services.AddSingleton<IConditionalBlockProcessor, ConditionalBlockProcessor>();
 
 // Rendering / DOCX build
-builder.Services.AddSingleton<StyleRenderer>();
-builder.Services.AddSingleton<DynamicDocxBuilderService>();
+builder.Services.AddSingleton<IStyleRenderer, StyleRenderer>();
+builder.Services.AddSingleton<IDynamicDocxBuilderService, DynamicDocxBuilderService>();
 
 // If you have repeater / conditional processors beyond the interface above, register them here.
-// builder.Services.AddSingleton<IRepeaterBlockProcessor, RepeaterBlockProcessor>();
+builder.Services.AddSingleton<IRepeaterBlockProcessor, RepeaterBlockProcessor>();
 
 // Repositories & Data Access: register your custom implementations (uncomment & adjust):
-// builder.Services.AddScoped<ITemplateRepository, TemplateRepository>();
-// builder.Services.AddScoped<IXsdRepository, XsdRepository>();
-// builder.Services.AddScoped<IDocumentJobRepository, DocumentJobRepository>();
-// builder.Services.AddScoped<IBaseDocxTemplateRepository, BaseDocxTemplateRepository>();
+builder.Services.AddSingleton<ITemplateRepository, TemplateRepository>();
+builder.Services.AddSingleton<IXsdRepository, XsdRepository>();
+builder.Services.AddSingleton<IDocumentGenerationJobRepository, DocumentGenerationJobRepository>();
+builder.Services.AddSingleton<IBaseDocxTemplateRepository, BaseDocxTemplateRepository>();
+builder.Services.AddSingleton<IDapperContext, DapperContext>();
 
 // Batch job queue / worker (uncomment when implemented):
-// builder.Services.AddSingleton<IDocumentJobQueue, InMemoryDocumentJobQueue>();
-// builder.Services.AddHostedService<BatchJobWorker>();
+builder.Services.AddSingleton<IDocumentJobQueue, InMemoryDocumentJobQueue>();
+builder.Services.AddHostedService<DocumentGenerationWorker>();
 
 // ------------------------------------------------------------
 // Health & Monitoring

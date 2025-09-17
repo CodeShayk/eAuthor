@@ -11,10 +11,10 @@ namespace eAuthor.Controllers;
 [Authorize]
 public class TemplatesController : ControllerBase
 {
-    private readonly TemplateService _svc;
-    private readonly HtmlSanitizer _sanitizer;
+    private readonly ITemplateService _svc;
+    private readonly IHtmlSanitizer _sanitizer;
 
-    public TemplatesController(TemplateService svc, HtmlSanitizer sanitizer)
+    public TemplatesController(ITemplateService svc, IHtmlSanitizer sanitizer)
     {
         _svc = svc;
         _sanitizer = sanitizer;

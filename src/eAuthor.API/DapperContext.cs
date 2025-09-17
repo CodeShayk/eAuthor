@@ -3,7 +3,7 @@ using Microsoft.Data.SqlClient;
 
 namespace eAuthor;
 
-public class DapperContext
+public class DapperContext : IDapperContext
 {
     private readonly IConfiguration _config;
 
